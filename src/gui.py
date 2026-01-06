@@ -48,11 +48,15 @@ class SmartCamGUI(tk.Tk):
         self.log = tk.Text(status, height=12, wrap="word")
         self.log.pack(fill="both", expand=True)
 
+        self.log.config(state="disabled")
+
         self.write_log("Ready. Select a video.")
     #
     def write_log(self, msg: str):
+        self.log.config(state="normal")  # allow insert
         self.log.insert("end", msg + "\n")
         self.log.see("end")
+        self.log.config(state="disabled")  # lock again
         self.update_idletasks()
 
     def pick_video(self):
