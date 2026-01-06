@@ -11,32 +11,32 @@ class MotionResult:
     boxes: List[Tuple[int, int, int, int]]  # (x, y, w, h)
     score: float                     # simple motion score
 
-def detect_motion(
-    prev_bgr: np.ndarray,
-    curr_bgr: np.ndarray,
-    diff_threshold: int,
-    min_contour_area: int,
-    blur_kernel: int,
-    erode_iters: int,
-    dilate_iters: int,
+def detectMotion(
+    prevBgr: np.ndarray,
+    currBgr: np.ndarray,
+    diffThreshold: int,
+    minContourArea: int,
+    blurKernel: int,
+    erodeIters: int,
+    dilateIters: int,
 ) -> MotionResult:
     # Convert to gray for robustness
-    prev = cv2.cvtColor(prev_bgr, cv2.COLOR_BGR2GRAY)
-    curr = cv2.cvtColor(curr_bgr, cv2.COLOR_BGR2GRAY)
+    prev = cv2.cvtColor(prevBgr, cv2.COLOR_BGR2GRAY)
+    curr = cv2.cvtColor(currBgr, cv2.COLOR_BGR2GRAY)
 
     # Frame differencing
     diff = cv2.absdiff(prev, curr)
 
     # Blur -> threshold -> morphology
-    k = blur_kernel if blur_kernel % 2 == 1 else blur_kernel + 1
+    k = blurKernel if blurKernel % 2 == 1 else blurKernel + 1
     diff = cv2.GaussianBlur(diff, (k, k), 0)
 
-    _, th = cv2.threshold(diff, diff_threshold, 255, cv2.THRESH_BINARY)
+    _, th = cv2.threshold(diff, diffThreshold, 255, cv2.THRESH_BINARY)
 
-    if erode_iters > 0:
-        th = cv2.erode(th, None, iterations=erode_iters)
-    if dilate_iters > 0:
-        th = cv2.dilate(th, None, iterations=dilate_iters)
+    if erodeIters > 0:
+        th = cv2.erode(th, None, iterations=erodeIters)
+    if dilateIters > 0:
+        th = cv2.dilate(th, None, iterations=dilateIters)
 
     # Contours
     contours, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -44,7 +44,7 @@ def detect_motion(
     boxes = []
     for c in contours:
         area = cv2.contourArea(c)
-        if area < min_contour_area:
+        if area < minContourArea:
             continue
         x, y, w, h = cv2.boundingRect(c)
         boxes.append((x, y, w, h))

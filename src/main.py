@@ -1,4 +1,4 @@
-from gui import run_gui
+from gui import runGui
 
 if __name__ == "__main__":
-    run_gui()
+    runGui()

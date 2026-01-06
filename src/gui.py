@@ -4,7 +4,7 @@ from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 
 from config import AppConfig
-from processor import process_video
+from processor import processVideo
 
 class SmartCamGUI(tk.Tk):
     def __init__(self):
@@ -12,7 +12,7 @@ class SmartCamGUI(tk.Tk):
         self.title("MotionDetection")
         self.geometry("820x520")
 
-        self.input_path: Path | None = None
+        self.inputPath: Path | None = None
 
         self.cfg = AppConfig()
 
@@ -20,24 +20,24 @@ class SmartCamGUI(tk.Tk):
         top.pack(fill="x")
 
         # Window Buttons
-        ttk.Button(top, text="Select Video", command=self.pick_video).pack(side="left")
-        ttk.Button(top, text="Run", command=self.run_processing).pack(side="left", padx=8)
+        ttk.Button(top, text="Select Video", command=self.pickVideo).pack(side="left")
+        ttk.Button(top, text="Run", command=self.runProcessing).pack(side="left", padx=8)
 
-        out_btn = ttk.Button(top, text="Open Output Folder", command=self.open_output_folder)
-        out_btn.pack(side="left", padx=8)
+        outBtn = ttk.Button(top, text="Open Output Folder", command=self.openOutputFolder)
+        outBtn.pack(side="left", padx=8)
 
         #Config Sliders
         settings = ttk.LabelFrame(self, text="Settings", padding=10)
         settings.pack(fill="x", padx=10, pady=(0, 10))
 
-        self.thresh = tk.IntVar(value=self.cfg.diff_threshold)
-        self.min_area = tk.IntVar(value=self.cfg.min_contour_area)
+        self.diffThreshold = tk.IntVar(value=self.cfg.diff_threshold)
+        self.minArea = tk.IntVar(value=self.cfg.min_contour_area)
 
         ttk.Label(settings, text="Diff threshold").grid(row=0, column=0, sticky="w")
-        ttk.Scale(settings, from_=5, to=80, variable=self.thresh, orient="horizontal").grid(row=0, column=1, sticky="ew", padx=8)
+        ttk.Scale(settings, from_=5, to=80, variable=self.diffThreshold, orient="horizontal").grid(row=0, column=1, sticky="ew", padx=8)
 
         ttk.Label(settings, text="Min contour area").grid(row=1, column=0, sticky="w", pady=(8,0))
-        ttk.Scale(settings, from_=100, to=8000, variable=self.min_area, orient="horizontal").grid(row=1, column=1, sticky="ew", padx=8, pady=(8,0))
+        ttk.Scale(settings, from_=100, to=8000, variable=self.minArea, orient="horizontal").grid(row=1, column=1, sticky="ew", padx=8, pady=(8,0))
 
         settings.columnconfigure(1, weight=1)
 
@@ -50,42 +50,42 @@ class SmartCamGUI(tk.Tk):
 
         self.log.config(state="disabled")
 
-        self.write_log("Ready. Select a video.")
+        self.writeLog("Ready. Select a video.")
     #
-    def write_log(self, msg: str):
+    def writeLog(self, msg: str):
         self.log.config(state="normal")  # allow insert
         self.log.insert("end", msg + "\n")
         self.log.see("end")
         self.log.config(state="disabled")  # lock again
         self.update_idletasks()
 
-    def pick_video(self):
+    def pickVideo(self):
         path = filedialog.askopenfilename(
             title="Select video",
             filetypes=[("Video files", "*.mp4 *.mov *.avi *.mkv"), ("All files", "*.*")]
         )
         if not path:
             return
-        self.input_path = Path(path)
-        self.write_log(f"Selected: {self.input_path}")
+        self.inputPath = Path(path)
+        self.writeLog(f"Selected: {self.inputPath}")
 
-    def run_processing(self):
-        if not self.input_path:
+    def runProcessing(self):
+        if not self.inputPath:
             messagebox.showwarning("No video", "Please select a video first.")
             return
 
-        self.cfg.diff_threshold = int(self.thresh.get())
-        self.cfg.min_contour_area = int(self.min_area.get())
+        self.cfg.diff_threshold = int(self.diffThreshold.get())
+        self.cfg.min_contour_area = int(self.minArea.get())
 
         try:
-            self.write_log(f"Processing with threshold={self.cfg.diff_threshold}, min_area={self.cfg.min_contour_area} ...")
-            res = process_video(self.input_path, self.cfg, log_fn=self.write_log)
-            messagebox.showinfo("Done", f"Saved highlight + CSV.\nEvents: {res.event_count}\n\n{res.highlight_path}")
+            self.writeLog(f"Processing with threshold={self.cfg.diff_threshold}, minArea={self.cfg.min_contour_area} ...")
+            res = processVideo(self.inputPath, self.cfg, logFn=self.writeLog)
+            messagebox.showinfo("Done", f"Saved highlight + CSV.\nEvents: {res.eventCount}\n\n{res.highlightPath}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
-            self.write_log(f"ERROR: {e}")
+            self.writeLog(f"ERROR: {e}")
     #s
-    def open_output_folder(self):
+    def openOutputFolder(self):
         # Cross-platform open folder
         import os, subprocess, sys
         p = self.cfg.output_dir.resolve()
@@ -98,6 +98,6 @@ class SmartCamGUI(tk.Tk):
         else:
             subprocess.run(["xdg-open", str(p)])
 
-def run_gui():
+def runGui():
     app = SmartCamGUI()
     app.mainloop()
