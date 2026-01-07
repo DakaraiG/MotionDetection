@@ -6,6 +6,9 @@ from PIL import Image, ImageTk
 
 from live_feed import LiveFeedController, LiveFeedConfig
 
+import cv2
+from live_motion import LiveMotionDetector, LiveMotionConfig
+
 
 class LiveFeedWindow(tk.Toplevel):
     def __init__(self, parent, logFn=None):
@@ -18,6 +21,13 @@ class LiveFeedWindow(tk.Toplevel):
         # Controller
         self.liveCfg = LiveFeedConfig(camera_index=0, target_fps=25, flip_horizontal=False)
         self.liveController = LiveFeedController(self.liveCfg)
+
+        # Motion detector (defaults; we’ll sync from main GUI settings)
+        self.motionCfg = LiveMotionConfig(diff_threshold=25, min_contour_area=800)
+        self.motionDetector = LiveMotionDetector(self.motionCfg)
+        self.motionEnabled = tk.BooleanVar(value=True)
+
+
 
         self.liveAfterId = None
         self.liveTkImage = None
@@ -35,7 +45,7 @@ class LiveFeedWindow(tk.Toplevel):
         self.stopBtn = ttk.Button(topBar, text="Stop", command=self.stopLiveFeed, state="disabled")
         self.stopBtn.pack(side="left")
 
-        # Optional: mirror
+        # mirror toggle
         self.flipVar = tk.BooleanVar(value=self.liveCfg.flip_horizontal)
         flipChk = ttk.Checkbutton(topBar, text="Mirror", variable=self.flipVar, command=self.applyFlip)
         flipChk.pack(side="right")
@@ -44,8 +54,16 @@ class LiveFeedWindow(tk.Toplevel):
         self.imageLabel = ttk.Label(self)
         self.imageLabel.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
+        #motion toggle
+        motionChk = ttk.Checkbutton(topBar, text="Motion overlay", variable=self.motionEnabled)
+        motionChk.pack(side="right", padx=8)
+
         # Close behaviour
         self.protocol("WM_DELETE_WINDOW", self.onClose)
+
+    def setMotionParams(self, diffThreshold: int, minArea: int):
+        self.motionCfg.diff_threshold = int(diffThreshold)
+        self.motionCfg.min_contour_area = int(minArea)
 
     def writeLog(self, msg: str):
         if self.logFn:
@@ -110,10 +128,28 @@ class LiveFeedWindow(tk.Toplevel):
             self.stopLiveFeed()
             return
 
+        # Motion detection
+        if bool(self.motionEnabled.get()):
+            motionRes = self.motionDetector.update(frameRgb)
+
+            # Draw overlays onto RGB frame (OpenCV draws fine on RGB arrays)
+            for (x, y, w, h) in motionRes.boxes:
+                cv2.rectangle(frameRgb, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+            if motionRes.hasMotion:
+                cv2.putText(
+                    frameRgb, "MOTION",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    1.0,
+                    (255, 0, 0),
+                    2,
+                    cv2.LINE_AA
+                )
+
         targetW = self.imageLabel.winfo_width()
         targetH = self.imageLabel.winfo_height()
 
-        # Layout not ready yet
         if targetW <= 1 or targetH <= 1:
             self.liveAfterId = self.after(50, self._updateFrame)
             return

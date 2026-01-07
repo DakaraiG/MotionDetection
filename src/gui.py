@@ -140,6 +140,8 @@ class SmartCamGUI(tk.Tk):
         a = int(self.minArea.get())
         self.diffThresholdValue.config(text=f"{t} / 255 levels")
         self.minAreaValue.config(text=f"{a} px²")
+        if self.liveWindow is not None and self.liveWindow.winfo_exists():
+            self.liveWindow.setMotionParams(self.diffThreshold.get(), self.minArea.get())
 
     #Live Feed Window
     def openLiveFeedWindow(self):
@@ -149,6 +151,7 @@ class SmartCamGUI(tk.Tk):
             return
 
         self.liveWindow = LiveFeedWindow(self, logFn=self.writeLog)
+        self.liveWindow.setMotionParams(self.diffThreshold.get(), self.minArea.get())
 
     #Video file processing
     def pickVideo(self):
