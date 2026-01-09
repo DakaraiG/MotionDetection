@@ -43,14 +43,21 @@ class SmartCamGUI(tk.Tk):
         self.liveBtn = ttk.Button(topFrame, text="Live Feed", command=self.openLiveFeedWindow)
         self.liveBtn.pack(side="left", padx=8)
 
-        #Detection Settings
-        settingsFrame = ttk.LabelFrame(self, text="Detection Settings", padding=10)
-        settingsFrame.pack(fill="x", padx=10, pady=(0, 10))
 
-        ttk.Label(settingsFrame, text="Preset").grid(row=0, column=0, sticky="w")
+        # Progress indicator
+        self.progressValue = tk.DoubleVar(value=0.0)
+        self.progressBar = ttk.Progressbar(self, mode="determinate", maximum=100, variable=self.progressValue)
+        # Hidden by default
+        
+
+        #Detection Settings
+        self.settingsFrame = ttk.LabelFrame(self, text="Detection Settings", padding=10)
+        self.settingsFrame.pack(fill="x", padx=10, pady=(0, 10))
+
+        ttk.Label(self.settingsFrame, text="Preset").grid(row=0, column=0, sticky="w")
         self.preset = tk.StringVar(value="Balanced")
         presetBox = ttk.Combobox(
-            settingsFrame,
+            self.settingsFrame,
             textvariable=self.preset,
             values=["Low sensitivity", "Balanced", "High sensitivity"],
             state="readonly",
@@ -62,13 +69,13 @@ class SmartCamGUI(tk.Tk):
         self.diffThreshold = tk.IntVar(value=self.cfg.diff_threshold)
         self.minArea = tk.IntVar(value=self.cfg.min_contour_area)
 
-        self.diffThresholdValue = ttk.Label(settingsFrame, text=f"{self.diffThreshold.get()} / 255 levels")
-        self.minAreaValue = ttk.Label(settingsFrame, text=f"{self.minArea.get()} px²")
+        self.diffThresholdValue = ttk.Label(self.settingsFrame, text=f"{self.diffThreshold.get()} / 255 levels")
+        self.minAreaValue = ttk.Label(self.settingsFrame, text=f"{self.minArea.get()} px²")
 
         # Sensitivity slider
-        ttk.Label(settingsFrame, text="Motion sensitivity").grid(row=1, column=0, sticky="w", pady=(10, 0))
+        ttk.Label(self.settingsFrame, text="Motion sensitivity").grid(row=1, column=0, sticky="w", pady=(10, 0))
         diffThresholdSlider = ttk.Scale(
-            settingsFrame,
+            self.settingsFrame,
             from_=5,
             to=80,
             variable=self.diffThreshold,
@@ -79,14 +86,14 @@ class SmartCamGUI(tk.Tk):
         self.diffThresholdValue.grid(row=1, column=2, sticky="w", pady=(10, 0))
 
         ttk.Label(
-            settingsFrame,
+            self.settingsFrame,
             text="Higher sensitivity detects smaller movement, but may increase false alerts.",
         ).grid(row=2, column=0, columnspan=3, sticky="w")
 
         # Minimum movement area slider
-        ttk.Label(settingsFrame, text="Ignore small movement").grid(row=3, column=0, sticky="w", pady=(10, 0))
+        ttk.Label(self.settingsFrame, text="Ignore small movement").grid(row=3, column=0, sticky="w", pady=(10, 0))
         minAreaSlider = ttk.Scale(
-            settingsFrame,
+            self.settingsFrame,
             from_=100,
             to=8000,
             variable=self.minArea,
@@ -97,11 +104,11 @@ class SmartCamGUI(tk.Tk):
         self.minAreaValue.grid(row=3, column=2, sticky="w", pady=(10, 0))
 
         ttk.Label(
-            settingsFrame,
+            self.settingsFrame,
             text="Higher values ignore small flicker/noise.",
         ).grid(row=4, column=0, columnspan=3, sticky="w")
 
-        settingsFrame.columnconfigure(1, weight=1)
+        self.settingsFrame.columnconfigure(1, weight=1)
 
         def applyPreset(*_):
             presetName = self.preset.get()
@@ -142,6 +149,47 @@ class SmartCamGUI(tk.Tk):
         self.update_idletasks()
 
 
+    #Progress Bar Helpers
+    def _showProgressBar(self):
+        # Place progress bar just under the top controls (only when needed)
+        if not self.progressBar.winfo_ismapped():
+            self.progressBar.pack(fill="x", padx=10, pady=(0, 10), before=self.settingsFrame)
+
+    def _hideProgressBar(self):
+        if self.progressBar.winfo_ismapped():
+            self.progressBar.pack_forget()
+        self.progressValue.set(0.0)
+
+    def _startFakeProgress(self):
+        # Smooth fill up to ~95% while processing runs
+        self.progressValue.set(0.0)
+        self._showProgressBar()
+        self._progressTick()
+
+    def _progressTick(self):
+        if not getattr(self, "isProcessing", False):
+            return
+
+        value = float(self.progressValue.get())
+        if value < 98.0:
+            # Ease-out towards 95%
+            step = max(0.1, (98.0 - value) * 0.01)
+            value = min(95.0, value + step)
+            self.progressValue.set(value)
+
+        self._progressAfterId = self.after(300, self._progressTick)
+
+    def _completeProgress(self):
+        # Jump to 100% then hide shortly after
+        try:
+            if hasattr(self, "_progressAfterId") and self._progressAfterId is not None:
+                self.after_cancel(self._progressAfterId)
+        except Exception:
+            pass
+
+        self.progressValue.set(100.0)
+        self.after(500, self._hideProgressBar)
+
     def _drainLogQueue(self):
         try:
             while True:
@@ -158,6 +206,7 @@ class SmartCamGUI(tk.Tk):
             self.selectBtn.config(state="normal")
             self.outBtn.config(state="normal")
             self.liveBtn.config(state="normal")
+            self._completeProgress()
         except Exception:
             pass
 
@@ -215,6 +264,9 @@ class SmartCamGUI(tk.Tk):
             self.liveBtn.config(state="disabled")
         except Exception:
             pass
+
+        # Start a determinate-style (fake) progress bar while processing runs in background
+        self._startFakeProgress()
 
         self.logQueue.put(
             f"Processing started: {self.inputPath.name} "
@@ -274,4 +326,3 @@ class SmartCamGUI(tk.Tk):
 def run_gui():
     app = SmartCamGUI()
     app.mainloop()
-
