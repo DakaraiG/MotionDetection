@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import tkinter as tk
+import threading
+import queue
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 
@@ -20,6 +22,11 @@ class SmartCamGUI(tk.Tk):
         self.cfg = AppConfig()
         self.liveWindow = None
 
+
+        # Background processing (keeps UI responsive on large videos)
+        self.logQueue = queue.Queue()
+        self.isProcessing = False
+        self.after(100, self._drainLogQueue)
         #Top Controls
         topFrame = ttk.Frame(self, padding=10)
         topFrame.pack(fill="x")
@@ -134,6 +141,27 @@ class SmartCamGUI(tk.Tk):
         self.logBox.config(state="disabled")
         self.update_idletasks()
 
+
+    def _drainLogQueue(self):
+        try:
+            while True:
+                msg = self.logQueue.get_nowait()
+                self.writeLog(msg)
+        except queue.Empty:
+            pass
+        self.after(100, self._drainLogQueue)
+
+    def _finishProcessingUi(self):
+        self.isProcessing = False
+        try:
+            self.runBtn.config(state="normal")
+            self.selectBtn.config(state="normal")
+            self.outBtn.config(state="normal")
+            self.liveBtn.config(state="normal")
+        except Exception:
+            pass
+
+
     #Settings UI helpers
     def updateSliderLabels(self):
         t = int(self.diffThreshold.get())
@@ -165,26 +193,56 @@ class SmartCamGUI(tk.Tk):
         self.writeLog(f"Selected: {self.inputPath}")
 
     def runProcessing(self):
+        if self.isProcessing:
+            messagebox.showinfo("Busy", "Processing is already running.")
+            return
+
         if not self.inputPath:
             messagebox.showwarning("No video", "Please select a video first.")
             return
 
-        # Push GUI settings into config
+        # Push GUI settings into config (backend uses snake_case)
         self.cfg.diff_threshold = int(self.diffThreshold.get())
         self.cfg.min_contour_area = int(self.minArea.get())
 
+        self.isProcessing = True
+
+        # Disable controls during processing to prevent double-run
         try:
-            self.writeLog(
-                f"Processing with threshold={self.cfg.diff_threshold}, minArea={self.cfg.min_contour_area} ..."
-            )
-            res = processVideo(self.inputPath, self.cfg, logFn=self.writeLog)
-            messagebox.showinfo(
-                "Done",
-                f"Saved highlight + CSV.\nEvents: {res.eventCount}\n\n{res.highlightPath}",
-            )
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
-            self.writeLog(f"ERROR: {e}")
+            self.runBtn.config(state="disabled")
+            self.selectBtn.config(state="disabled")
+            self.outBtn.config(state="disabled")
+            self.liveBtn.config(state="disabled")
+        except Exception:
+            pass
+
+        self.logQueue.put(
+            f"Processing started: {self.inputPath.name} "
+            f"(threshold={self.cfg.diff_threshold}, minArea={self.cfg.min_contour_area})"
+        )
+
+        def worker():
+            try:
+                res = processVideo(
+                    self.inputPath,
+                    self.cfg,
+                    logFn=lambda m: self.logQueue.put(m),
+                )
+                self.logQueue.put(f"Done. Events: {res.eventCount}")
+                self.after(
+                    0,
+                    lambda: messagebox.showinfo(
+                        "Done",
+                        f"Saved highlight + CSV.\nEvents: {res.eventCount}\n\n{res.highlightPath}",
+                    ),
+                )
+            except Exception as e:
+                self.logQueue.put(f"ERROR: {e}")
+                self.after(0, lambda: messagebox.showerror("Error", str(e)))
+            finally:
+                self.after(0, self._finishProcessingUi)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def openOutputFolder(self):
         import os
