@@ -43,9 +43,29 @@ python src/main.py
 
 ## Output Files
 
-- `output/highlight.mp4` highlighted video with bounding boxes
-- `output/events.csv` motion event summary (start/end frames and timestamps)
-- `output/events/` reserved for per-event assets if you add them later
+- `~/MotionDetection/output/highlight.mp4` highlighted video with bounding boxes
+- `~/MotionDetection/output/events.csv` motion event summary (start/end frames and timestamps)
+- `~/MotionDetection/output/events/` reserved for per-event assets if you add them later
+
+You can override the output folder by setting `MOTIONDETECTION_OUTPUT_DIR`.
+
+## Build macOS .app
+
+```bash
+./scripts/build_macos_app.sh
+```
+
+The app bundle will be created at `dist/MotionDetection.app`.
+
+The app includes a camera usage description in its Info.plist so macOS can show the permission prompt.
+
+## Build Windows .exe
+
+```bat
+scripts\\build_windows_exe.bat
+```
+
+The executable will be created at `dist\\MotionDetection.exe`.
 
 ## Notes
 

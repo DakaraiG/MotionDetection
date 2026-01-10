@@ -1,5 +1,12 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import os
 from pathlib import Path
+
+def _default_output_dir() -> Path:
+    env = os.getenv("MOTIONDETECTION_OUTPUT_DIR")
+    if env:
+        return Path(env).expanduser()
+    return Path.home() / "MotionDetection" / "output"
 
 @dataclass
 class AppConfig:
@@ -16,7 +23,7 @@ class AppConfig:
     min_event_frames: int = 8         # ignore very short events
 
     # Output
-    output_dir: Path = Path("output")
+    output_dir: Path = field(default_factory=_default_output_dir)
     events_dirname: str = "events"
     highlight_name: str = "highlight.mp4"
     events_csv_name: str = "events.csv"
