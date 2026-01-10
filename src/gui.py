@@ -14,7 +14,7 @@ from live_feed_window import LiveFeedWindow
 class SmartCamGUI(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("MotionDetection")
+        self.title("Motion Detection")
         self.geometry("900x650")
 
         # State
