@@ -102,7 +102,7 @@ class SmartCamGUI(tk.Tk):
         )
         minAreaSlider.grid(row=3, column=1, sticky="ew", padx=8, pady=(10, 0))
         self.minAreaValue.grid(row=3, column=2, sticky="w", pady=(10, 0))
-
+        # Sensitivity dropdown selector
         ttk.Label(
             self.settingsFrame,
             text="Higher values ignore small flicker/noise.",
@@ -227,7 +227,7 @@ class SmartCamGUI(tk.Tk):
             self.liveWindow.focus_force()
             return
 
-        self.liveWindow = LiveFeedWindow(self, logFn=self.writeLog)
+        self.liveWindow = LiveFeedWindow(self, self.cfg, logFn=self.writeLog)
         self.liveWindow.setMotionParams(self.diffThreshold.get(), self.minArea.get())
 
     #Video file processing

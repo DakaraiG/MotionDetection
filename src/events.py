@@ -7,7 +7,7 @@ class Event:
     id: int
     startIdx: int
     endIdx: int
-    # aggregate bounding box for the event (optional)
+    # aggregate bounding box for the event 
     bbox: Optional[Tuple[int, int, int, int]] = None
 
 def _mergeBbox(a, b):
@@ -44,7 +44,7 @@ class EventBuilder:
 
             self._lastMotionIdx = frameIdx
 
-            # merge boxes into an event bbox (coarse but useful)
+            # merge boxes into an event bbox
             for b in boxes:
                 self._bbox = b if self._bbox is None else _mergeBbox(self._bbox, b)
 

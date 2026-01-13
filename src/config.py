@@ -27,3 +27,4 @@ class AppConfig:
     events_dirname: str = "events"
     highlight_name: str = "highlight.mp4"
     events_csv_name: str = "events.csv"
+    live_events_csv_name: str = "live_events.csv"

@@ -45,6 +45,7 @@ python src/main.py
 
 - `~/MotionDetection/output/highlight.mp4` highlighted video with bounding boxes
 - `~/MotionDetection/output/events.csv` motion event summary (start/end frames and timestamps)
+- `~/MotionDetection/output/live_events.csv` live feed motion event summary (start/end frames and timestamps)
 - `~/MotionDetection/output/events/` reserved for per-event assets if you add them later
 
 You can override the output folder by setting `MOTIONDETECTION_OUTPUT_DIR`.
